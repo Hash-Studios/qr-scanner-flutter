@@ -41,7 +41,9 @@ class HomePage extends StatefulWidget {
 }
 
 class HomePageState extends State<HomePage> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
   String result = "a";
+  bool resultScanned = false;
   TapGestureRecognizer _flutterTapRecognizer;
   Future _scanQR() async {
     try {
@@ -102,140 +104,161 @@ class HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<DynamicTheme>(context);
     if (result != "a") {
-      return new AlertDialog(
-        title: const Text('Result'),
-        content: new Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+      Clipboard.setData(
+        ClipboardData(text: result),
+      );
+      setState(() {
+        resultScanned = true;
+      });
+      _scaffoldKey.currentState.showSnackBar(
+        SnackBar(
+          content: Text('Result copied to clipboard.'),
+        ),
+      );
+    } else {
+      // setState(() {
+      //   resultScanned = false;
+      // });
+    }
+    return Scaffold(
+      key: _scaffoldKey,
+      drawer: Drawer(
+        elevation: 0,
+        child: ListView(
+          padding: EdgeInsets.zero,
           children: <Widget>[
-            RichText(
-              text: TextSpan(
-                text: result,
-                recognizer: _flutterTapRecognizer,
-                style: TextStyle(
-                  color: Colors.blue,
-                  decoration: TextDecoration.underline,
-                  fontSize: 20,
+            DrawerHeader(
+              child: Image.asset(
+                'assets/images/logo.jfif',
+              ),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color.fromARGB(255, 60, 140, 231),
+                    Color.fromARGB(255, 0, 234, 255),
+                  ],
                 ),
               ),
             ),
-          ],
-        ),
-        actions: <Widget>[
-          new FlatButton(
-            onPressed: () {
-              Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(
-                    builder: (BuildContext context) => HomePage(),
-                  ),
-                  (Route route) => route == null);
-            },
-            textColor: Theme.of(context).primaryColor,
-            child: const Text('Okay, got it!'),
-          ),
-        ],
-      );
-    } else {
-      return Scaffold(
-        drawer: Drawer(
-          elevation: 0,
-          child: ListView(
-            padding: EdgeInsets.zero,
-            children: <Widget>[
-              DrawerHeader(
-                child: Image.asset(
-                  'assets/images/logo.jfif',
-                ),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color.fromARGB(255, 60, 140, 231),
-                      Color.fromARGB(255, 0, 234, 255),
-                    ],
-                  ),
-                ),
+            Divider(
+              height: 2.0,
+            ),
+            ListTile(
+              title: Center(
+                child: Text('CodeNameAKshay'),
               ),
-              Divider(
-                height: 2.0,
-              ),
-              ListTile(
-                title: Center(
-                  child: Text('CodeNameAKshay'),
-                ),
+              onTap: () {
+                // Navigator.pop(context);
+              },
+            ),
+            Divider(
+              height: 2.0,
+            ),
+            Builder(
+              builder: (context) => ListTile(
+                title: Text('Toggle Dark mode'),
+                leading: Icon(Icons.brightness_4),
                 onTap: () {
-                  // Navigator.pop(context);
+                  setState(() {
+                    themeProvider.changeDarkMode(!themeProvider.isDarkMode);
+                  });
+                  Navigator.pop(context);
                 },
-              ),
-              Divider(
-                height: 2.0,
-              ),
-              Builder(
-                builder: (context) => ListTile(
-                  title: Text('Toggle Dark mode'),
-                  leading: Icon(Icons.brightness_4),
-                  onTap: () {
+                trailing: CupertinoSwitch(
+                  value: themeProvider.getDarkMode(),
+                  onChanged: (value) {
                     setState(() {
-                      themeProvider.changeDarkMode(!themeProvider.isDarkMode);
+                      themeProvider.changeDarkMode(value);
                     });
                     Navigator.pop(context);
                   },
-                  trailing: CupertinoSwitch(
-                    value: themeProvider.getDarkMode(),
-                    onChanged: (value) {
-                      setState(() {
-                        themeProvider.changeDarkMode(value);
-                      });
-                      Navigator.pop(context);
-                    },
-                  ),
                 ),
               ),
-              Divider(
-                height: 2.0,
-              ),
-              Builder(
-                builder: (context) => ListTile(
-                  leading: Icon(Icons.open_in_browser),
-                  title: new InkWell(
-                      child: Text('Visit my website!'),
-                      onTap: () {
-                        launch('http://codenameakshay.tech');
-                        Navigator.pop(context);
-                      }),
-                  onTap: () {
-                    Navigator.pop(context);
-                  },
-                ),
-              ),
-              Divider(
-                height: 2.0,
-              ),
-            ],
-          ),
-        ),
-        appBar: AppBar(
-          title: Text("QR Scan"),
-        ),
-        body: Center(
-          child: Text(
-            "Press scan to scan barcodes or QR codes.",
-            style: new TextStyle(
-              fontSize: 30.0,
-              fontWeight: FontWeight.bold,
-              fontFamily: "IBM Plex Sans",
             ),
-            textAlign: TextAlign.center,
+            Divider(
+              height: 2.0,
+            ),
+            Builder(
+              builder: (context) => ListTile(
+                leading: Icon(Icons.open_in_browser),
+                title: new InkWell(
+                    child: Text('Visit my website!'),
+                    onTap: () {
+                      launch('http://codenameakshay.tech');
+                      Navigator.pop(context);
+                    }),
+                onTap: () {
+                  Navigator.pop(context);
+                },
+              ),
+            ),
+            Divider(
+              height: 2.0,
+            ),
+          ],
+        ),
+      ),
+      appBar: AppBar(
+        title: Text("QR Scan"),
+      ),
+      body: Stack(
+        children: <Widget>[
+          Center(
+            child: Text(
+              "Press scan to scan barcodes or QR codes.",
+              style: new TextStyle(
+                fontSize: 30.0,
+                fontWeight: FontWeight.bold,
+                fontFamily: "IBM Plex Sans",
+              ),
+              textAlign: TextAlign.center,
+            ),
           ),
-        ),
-        floatingActionButton: FloatingActionButton.extended(
-          icon: Icon(Icons.camera_alt),
-          label: Text("Scan"),
-          onPressed: _scanQR,
-        ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      );
-    }
+          resultScanned
+              ? AlertDialog(
+                  title: const Text('Result'),
+                  content: new Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      RichText(
+                        text: TextSpan(
+                          text: result,
+                          recognizer: _flutterTapRecognizer,
+                          style: TextStyle(
+                            color: Colors.blue,
+                            decoration: TextDecoration.underline,
+                            fontSize: 20,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  actions: <Widget>[
+                    new FlatButton(
+                      onPressed: () {
+                        Navigator.of(context).pushAndRemoveUntil(
+                            MaterialPageRoute(
+                              builder: (BuildContext context) => HomePage(),
+                            ),
+                            (Route route) => route == null);
+                      },
+                      textColor: Theme.of(context).primaryColor,
+                      child: const Text('Okay, got it!'),
+                    ),
+                  ],
+                )
+              : Container(),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        icon: Icon(Icons.camera_alt),
+        label: Text("Scan"),
+        onPressed: _scanQR,
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    );
   }
 }
