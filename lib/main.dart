@@ -1,111 +1,241 @@
+import 'dart:async';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:barcode_scan/barcode_scan.dart';
+import 'package:flutter/services.dart';
+import './theme_provider.dart';
+import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/gestures.dart';
 
-void main() => runApp(MyApp());
+void main() {
+  runApp(
+    ChangeNotifierProvider<DynamicTheme>(
+      create: (_) => DynamicTheme(),
+      child: MyApp(),
+    ),
+  );
+}
 
 class MyApp extends StatelessWidget {
-  // This widget is the root of your application.
+  const MyApp({
+    Key key,
+  }) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<DynamicTheme>(context);
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
-        primarySwatch: Colors.blue,
-      ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
+      debugShowCheckedModeBanner: false,
+      theme: themeProvider.getDarkMode() ? ThemeData.dark() : ThemeData.light(),
+      home: HomePage(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title}) : super(key: key);
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
+class HomePage extends StatefulWidget {
   @override
-  _MyHomePageState createState() => _MyHomePageState();
+  HomePageState createState() {
+    return new HomePageState();
+  }
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class HomePageState extends State<HomePage> {
+  String result = "a";
+  TapGestureRecognizer _flutterTapRecognizer;
+  Future _scanQR() async {
+    try {
+      String qrResult = await BarcodeScanner.scan();
+      setState(() {
+        result = qrResult;
+      });
+    } on PlatformException catch (ex) {
+      if (ex.code == BarcodeScanner.CameraAccessDenied) {
+        setState(() {
+          result = "CAMERA permission denied!";
+        });
+      } else {
+        setState(() {
+          result = "$ex Error occurred.";
+        });
+      }
+    } on FormatException {
+      setState(() {
+        result = "Nothing scanned!";
+      });
+    } catch (ex) {
+      setState(() {
+        result = "$ex Error occured.";
+      });
+    }
+  }
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  @override
+  void initState() {
+    super.initState();
+    _flutterTapRecognizer = new TapGestureRecognizer()
+      ..onTap = () => _openUrl(result);
+  }
+
+  @override
+  void dispose() {
+    _flutterTapRecognizer.dispose();
+    super.dispose();
+  }
+
+  void _openUrl(String url) async {
+    // Close the about dialog.
+    Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (BuildContext context) => HomePage(),
+        ),
+        (Route route) => route == null);
+
+    if (await canLaunch(url)) {
+      await launch(url);
+    } else {
+      throw 'Problem launching $url';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
+    final themeProvider = Provider.of<DynamicTheme>(context);
+    if (result != "a") {
+      return new AlertDialog(
+        title: const Text('Result'),
+        content: new Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.display1,
+            RichText(
+              text: TextSpan(
+                text: result,
+                recognizer: _flutterTapRecognizer,
+                style: TextStyle(
+                  color: Colors.blue,
+                  decoration: TextDecoration.underline,
+                  fontSize: 20,
+                ),
+              ),
             ),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
-    );
+        actions: <Widget>[
+          new FlatButton(
+            onPressed: () {
+              Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(
+                    builder: (BuildContext context) => HomePage(),
+                  ),
+                  (Route route) => route == null);
+            },
+            textColor: Theme.of(context).primaryColor,
+            child: const Text('Okay, got it!'),
+          ),
+        ],
+      );
+    } else {
+      return Scaffold(
+        drawer: Drawer(
+          elevation: 0,
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: <Widget>[
+              DrawerHeader(
+                child: Image.asset(
+                  'assets/images/logo.jfif',
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color.fromARGB(255, 60, 140, 231),
+                      Color.fromARGB(255, 0, 234, 255),
+                    ],
+                  ),
+                ),
+              ),
+              Divider(
+                height: 2.0,
+              ),
+              ListTile(
+                title: Center(
+                  child: Text('CodeNameAKshay'),
+                ),
+                onTap: () {
+                  // Navigator.pop(context);
+                },
+              ),
+              Divider(
+                height: 2.0,
+              ),
+              Builder(
+                builder: (context) => ListTile(
+                  title: Text('Toggle Dark mode'),
+                  leading: Icon(Icons.brightness_4),
+                  onTap: () {
+                    setState(() {
+                      themeProvider.changeDarkMode(!themeProvider.isDarkMode);
+                    });
+                    Navigator.pop(context);
+                  },
+                  trailing: CupertinoSwitch(
+                    value: themeProvider.getDarkMode(),
+                    onChanged: (value) {
+                      setState(() {
+                        themeProvider.changeDarkMode(value);
+                      });
+                      Navigator.pop(context);
+                    },
+                  ),
+                ),
+              ),
+              Divider(
+                height: 2.0,
+              ),
+              Builder(
+                builder: (context) => ListTile(
+                  leading: Icon(Icons.open_in_browser),
+                  title: new InkWell(
+                      child: Text('Visit my website!'),
+                      onTap: () {
+                        launch('http://codenameakshay.tech');
+                        Navigator.pop(context);
+                      }),
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
+                ),
+              ),
+              Divider(
+                height: 2.0,
+              ),
+            ],
+          ),
+        ),
+        appBar: AppBar(
+          title: Text("QR Scan"),
+        ),
+        body: Center(
+          child: Text(
+            "Press scan to scan barcodes or QR codes.",
+            style: new TextStyle(
+              fontSize: 30.0,
+              fontWeight: FontWeight.bold,
+              fontFamily: "IBM Plex Sans",
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          icon: Icon(Icons.camera_alt),
+          label: Text("Scan"),
+          onPressed: _scanQR,
+        ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      );
+    }
   }
 }
