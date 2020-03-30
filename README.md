@@ -2,12 +2,12 @@
 
 A Flutter based QR/Bar code scanner app with dark mode and material design.
 
-[x] Scan QR codes.
-[x] Scan barcodes.
-[x] Show result in a popup.
-[x] Clicking result open the website.
-[x] Result automatically gets copied to clipboard.
-[x] Show snackbar.
+- [x] Scan QR codes.
+- [x] Scan barcodes.
+- [x] Show result in a popup.
+- [x] Clicking result open the website.
+- [x] Result automatically gets copied to clipboard.
+- [x] Show snackbar.
 
 ## Demo
 
